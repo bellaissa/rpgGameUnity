@@ -1,0 +1,396 @@
+using System.Collections;
+using System.Collections.Generic;
+using System;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class Inventory : MonoBehaviour {
+	public Text popupText;
+	public GameObject popupExitButton;
+	public Image popupBox;
+	public GameObject BUpopup;
+
+	public GameObject swordOrRingBox;
+	public GameObject confirmBox;
+	public GameObject fragNumberBox;
+	public Text fragNumber;
+
+	public GameObject player;
+	public GameObject inventoryPanel;
+	public static int gilda = 300;
+
+	//for fragmentized items:
+	public Sprite attackFrag;
+	public Sprite durabilityFrag;
+	public Sprite flameFrag;
+	public Sprite aquaFrag;
+	public Sprite soilFrag;
+	public Sprite cycloneFrag;
+	public Sprite holyFrag;
+	public Sprite smashFrag;
+	public Sprite multipleFrag;
+  
+	//for coins:
+	public Sprite coinFrag;
+
+	public List<Item> list = new List<Item>();
+
+	public static Inventory instance;
+
+	void Awake(){
+    //Singleton design pattern
+		instance = this;
+		if (GameManager.tempList != null)
+		    list = GameManager.tempList;
+		if (GameManager.tempGilda != 0)
+			gilda = GameManager.tempGilda;
+    
+    //add items collected from chests
+		list.AddRange (GameManager.chestItems);
+
+		checkForRepeatedItems ();
+		updateSlots ();
+		clearPopup ();
+		swordOrRingBox.SetActive (false);
+		confirmBox.SetActive (false);
+		BUpopup.SetActive (false);
+		fragNumberBox.SetActive (false);
+		}
+
+	void OnDestroy(){
+    //save data before changing scenes
+		GameManager.tempList = list;
+		GameManager.tempGilda = gilda;
+	}
+
+	public void clearPopup(){
+		popupBox.color = Color.clear;
+		popupExitButton.SetActive (false);
+		popupText.text = null;
+	}
+	public void showPopup(){
+		popupBox.color = Color.white;
+		popupExitButton.SetActive (true);
+	}
+
+	void Update(){
+		updateSlots ();
+		checkForRepeatedItems ();
+	}
+		
+	void updateSlots(){
+    //rearrange inventory to fill in empty slots
+		int i = 0;
+
+		foreach (Transform child in inventoryPanel.transform) {
+			
+			SlotController slot = child.GetComponent<SlotController>();
+			if (i < list.Count) {
+				slot.item = list [i];
+			} else {
+				slot.item = null;
+			}
+
+			slot.updateInfo ();
+
+			i++;
+		}
+}
+
+	public void Add(Item item){
+		  //the number of available slots or items capacity is 47
+			if (list.Count < 47) {
+			    item.Count = 1; 
+				list.Add (item);
+			}
+		updateSlots ();
+	}
+
+	public void Remove(Item item){
+		list.Remove (item);
+		updateSlots ();
+	}
+
+	//an item can't exist twice in the inventory
+  public void checkForRepeatedItems(){
+		for (int i = 0; i < list.Count; i++)
+			for (int j = i + 1; j < list.Count; j++) 
+        // if the item is already in the inventory except for coin frags, they're the only thing that can exist twice
+				if (list [i].ItemName == list [j].ItemName && list [i].FragType != "coin frag"){
+					list.RemoveAt (j);
+          //the item isn't added but its count is increased
+					list [i].Count++;
+			}
+
+	}
+
+	public void UseButton(){
+		if ( SlotController.currentSlot.item) {
+      //can't use a healing item if the player isn't sick!
+			if (SlotController.currentSlot.item.ItemType == "healing item" && LunaClass.instance.IsThirsty == true) {
+				popupText.text = "Luna is thirsty! She can't swallow food!";
+				showPopup ();
+			} else if (SlotController.currentSlot.item.ItemName == "FreshWater" && LunaClass.instance.IsThirsty == false) {
+				popupText.text = "I don't think that Luna is in the mood for being hydrated.";
+				showPopup ();
+			} else if (SlotController.currentSlot.item.ItemName == "Bezoar" && LunaClass.instance.IsPoisoned == false) {
+				popupText.text = "You do realize that bezoar is an antidote for poisons, do you?";
+				showPopup ();
+			} else if (SlotController.currentSlot.item.ItemName == "MoonWater" && LunaClass.instance.IsCursed == false) {
+				popupText.text = "Don't worry, you're not cursed. You don't have to be so paranoid!";
+				showPopup ();
+			} else if (SlotController.currentSlot.item.ItemName == "Pepper" && LunaClass.instance.IsSlow == false) {
+				popupText.text = "Want to spice things up a bit? Well, look elsewhere.";
+				showPopup ();
+			} else if (SlotController.currentSlot.item.ItemName == "Coffee" && LunaClass.instance.IsStopped == false) {
+				popupText.text = "Do you want Luna to be a caffeine addict? this is her third cup today!";
+				showPopup ();
+			}
+      
+			else
+			SlotController.currentSlot.item.Use ();
+      
+      // in case the tester/player wanted to press unusual buttons outside of the current flow
+			confirmBox.SetActive (false);
+			SlotController.currentSlot.panelClear ();
+		}
+	}
+
+	public void FragButton(){
+		int num = Convert.ToInt32(fragNumber.text);
+    
+		//rare gems are fragmentized in a different way considering they have multiple stats
+		if (SlotController.currentSlot.item.ItemType == "rare gemstone") {
+			List<STAT> fragStats = SlotController.currentSlot.item.Stats;
+			List<int> fragNums = SlotController.currentSlot.item.StatsNums;
+			string oldName = SlotController.currentSlot.item.ItemName;
+			string oldDescription = SlotController.currentSlot.item.Description;
+			SlotController.currentSlot.panelClear ();
+      
+      // if the number of desired frags equals the item's count it is deleted, or else its count is decreased
+			if (num == SlotController.currentSlot.item.Count)
+			    SlotController.currentSlot.item.Fragmentize (); //delete it
+			else
+				SlotController.currentSlot.item.Count -= num;
+			
+			FragmentizedItem fragmentized = new FragmentizedItem (); //make a fragmentized version of it
+      
+      //copy the stats and their numbers
+			fragmentized.Stats = fragStats;
+			fragmentized.StatsNums = fragNums;
+
+			// if multiple frags are desired ,the stat numbers are multiplied
+      if (num > 1)
+				for (int i = 0; i < fragmentized.StatsNums.Count; i++)
+					fragmentized.StatsNums[i] *= num;
+			
+			fragmentized.Description = "Was ''" + oldName + "''." + oldDescription;
+
+			fragmentized.Icon = multipleFrag;
+			fragmentized.ItemName = "multiple frag";
+			fragmentized.FragType = "rare gemstone frag";
+
+			fragmentized.Count = num;
+
+			//add fragmentized item to inventory
+			Inventory.instance.Add (fragmentized);
+			fragNumberBox.SetActive (false);
+			popupText.text = fragmentized.ItemName + " has been created!";
+
+		} else if (SlotController.currentSlot.item.ItemType == "coin"){
+			
+			SPECIALITY fragAtt = SlotController.currentSlot.item.SpecialAttribute;
+			string oldName = SlotController.currentSlot.item.ItemName;
+
+			SlotController.currentSlot.panelClear ();
+			SlotController.currentSlot.item.Fragmentize (); //delete it
+			FragmentizedItem fragmentized = new FragmentizedItem (); //make a fragmentized version of it
+
+			fragmentized.SpecialAttribute = fragAtt;
+			fragmentized.Description = "Was ''" + oldName + "''. Imbibes the weapon with the ''" + fragAtt + "'' attribute.";
+			fragmentized.Icon = coinFrag;
+			fragmentized.ItemName = oldName + " Frag";
+			fragmentized.FragType = "coin frag";
+
+			fragNumberBox.SetActive (false);
+			popupText.text = fragmentized.ItemName + " has been created!";
+			Inventory.instance.Add (fragmentized);
+		}
+		else {
+			//save item's data
+			STAT fragStat = SlotController.currentSlot.item.Stat;
+			int fragNum = SlotController.currentSlot.item.StatNum; 
+			string oldName = SlotController.currentSlot.item.ItemName;
+
+			SlotController.currentSlot.panelClear ();
+			if (num == SlotController.currentSlot.item.Count)
+				SlotController.currentSlot.item.Fragmentize (); //delete it
+			else
+				SlotController.currentSlot.item.Count -= num;
+			FragmentizedItem fragmentized = new FragmentizedItem (); //make a fragmentized version of it
+
+			fragmentized.Stat = fragStat;
+			fragmentized.StatNum = fragNum * num;
+			fragmentized.Count = num;
+			fragmentized.Description = "Was ''" + oldName + "''. Increases weapon's " + fragStat + " stat.";
+			fragmentized.FragType = "normal frag";
+
+			//specify the icon and name according to the stat
+			if (fragStat == STAT.attack) { 
+				fragmentized.Icon = attackFrag;
+				fragmentized.ItemName = "attack frag";
+			} else if (fragStat == STAT.durability) { 
+				fragmentized.Icon = durabilityFrag;
+				fragmentized.ItemName = "durability frag";
+			} else if (fragStat == STAT.flame) {
+				fragmentized.Icon = flameFrag;
+				fragmentized.ItemName = "flame frag";
+			} else if (fragStat == STAT.aqua) {
+				fragmentized.Icon = aquaFrag;
+				fragmentized.ItemName = "aqua frag";
+			} else if (fragStat == STAT.soil) {
+				fragmentized.Icon = soilFrag;
+				fragmentized.ItemName = "soil frag";
+			} else if (fragStat == STAT.cyclone) { 
+				fragmentized.Icon = cycloneFrag;
+				fragmentized.ItemName = "cyclone frag";
+			} else if (fragStat == STAT.holy) {
+				fragmentized.Icon = holyFrag;
+				fragmentized.ItemName = "holy frag";
+			} else if (fragStat == STAT.smash) {
+				fragmentized.Icon = smashFrag;
+				fragmentized.ItemName = "smash frag";
+			}
+      
+			fragNumberBox.SetActive (false);
+			popupText.text = fragmentized.ItemName + " has been created!";
+      
+			//add fragmentized item to inventory
+			Inventory.instance.Add (fragmentized);
+		}
+    
+		updateSlots ();
+		showPopup ();
+		confirmBox.SetActive (false);
+		SlotController.currentSlot.panelClear ();
+	}
+
+	public void DeleteButton(){
+		if (SlotController.currentSlot.item.Deletable) {
+			SlotController.currentSlot.item.Delete ();
+			SlotController.currentSlot.panelClear ();
+			swordOrRingBox.SetActive (false);
+			confirmBox.SetActive (false);
+		}
+	}
+		
+	public void CancelButton(){
+		SlotController.currentSlot.panelClear ();
+		swordOrRingBox.SetActive (false);
+		confirmBox.SetActive (false);
+		fragNumberBox.SetActive (false);
+	}
+		
+	public void FragIntoSwordButton(){
+		if (SlotController.currentSlot.item.ItemType == "fragmentized" && BaseSword.instance.Pts >= 2) {
+			if (SlotController.currentSlot.item.FragType == "normal frag") {
+        //get the fragmentized item's stat and number
+				STAT intoStat = SlotController.currentSlot.item.Stat;
+				int intoStatNum = SlotController.currentSlot.item.StatNum;
+        
+        //increase the corresponding weapon stat
+				if (intoStat == STAT.attack)
+					BaseSword.instance.Attack += intoStatNum;
+				else if (intoStat == STAT.durability)
+					BaseSword.instance.Durability += intoStatNum;
+				else if (intoStat == STAT.flame)
+					BaseSword.instance.Flame += intoStatNum;
+				else if (intoStat == STAT.aqua)
+					BaseSword.instance.Aqua += intoStatNum;
+				else if (intoStat == STAT.cyclone)
+					BaseSword.instance.Cyclone += intoStatNum;
+				else if (intoStat == STAT.soil)
+					BaseSword.instance.Soil += intoStatNum;
+				else if (intoStat == STAT.holy)
+					BaseSword.instance.Holy += intoStatNum;
+				else if (intoStat == STAT.smash)
+					BaseSword.instance.Smash += intoStatNum;
+				
+				popupText.text = "''" + BaseSword.instance.WeaponName + "'s'' " + intoStat.ToString () + " was increased by " + intoStatNum.ToString () + "!";
+				showPopup ();
+				swordOrRingBox.SetActive (false);
+				SlotController.currentSlot.item.Delete ();
+
+			} else if (SlotController.currentSlot.item.FragType == "coin frag") {
+				SPECIALITY spc = SlotController.currentSlot.item.SpecialAttribute;
+        
+        //give the weapon a special attribute according to the coin
+				if (spc == SPECIALITY.absup)
+					BaseSword.instance.Absup = true;
+				else if (spc == SPECIALITY.drain)
+					BaseSword.instance.Drain = true;
+				else if (spc == SPECIALITY.healing)
+					BaseSword.instance.Healing = true;
+				else if (spc == SPECIALITY.poison)
+					BaseSword.instance.Poison = true;
+				else if (spc == SPECIALITY.poverty)
+					BaseSword.instance.Poverty = true;
+				else if (spc == SPECIALITY.wealth)
+					BaseSword.instance.Wealth = true;
+				else if (spc == SPECIALITY.stop)
+					BaseSword.instance.Stop = true;
+				else if (spc == SPECIALITY.sacrifice)
+					BaseSword.instance.Sacrifice = true;
+				else if (spc == SPECIALITY.thief)
+					BaseSword.instance.Thief = true;
+
+				SlotController.currentSlot.item.Delete ();
+				popupText.text = "''" + BaseSword.instance.WeaponName + "'' Has been imbibed with the " + spc.ToString () + " special attribute!";
+				showPopup ();
+				swordOrRingBox.SetActive (false);
+        
+			} 
+      else 
+      if (SlotController.currentSlot.item.FragType == "rare gemstone frag") {
+				List<STAT> l1 = SlotController.currentSlot.item.Stats;
+				List<int> l2 = SlotController.currentSlot.item.StatsNums;
+
+				for (int i = 0; i < l1.Count; i++) {
+					if (l1 [i] == STAT.attack)
+						BaseSword.instance.Attack += l2 [i];
+					else if (l1 [i] == STAT.durability)
+						BaseSword.instance.Durability += l2 [i];
+					else if (l1 [i] == STAT.flame)
+						BaseSword.instance.Flame += l2 [i];
+					else if (l1 [i] == STAT.aqua)
+						BaseSword.instance.Aqua += l2 [i];
+					else if (l1 [i] == STAT.cyclone)
+						BaseSword.instance.Cyclone += l2 [i];
+					else if (l1 [i] == STAT.soil)
+						BaseSword.instance.Soil += l2 [i];
+					else if (l1 [i] == STAT.holy)
+						BaseSword.instance.Holy += l2 [i];
+					else if (l1 [i] == STAT.smash)
+						BaseSword.instance.Smash += l2 [i];
+				}
+        
+				popupText.text = "''" + BaseSword.instance.WeaponName + "''s stats have increased!";
+				showPopup ();
+				swordOrRingBox.SetActive (false);
+				SlotController.currentSlot.item.Delete ();
+			}
+      
+			BaseSword.instance.Pts--;
+
+		} else {
+    
+			popupText.text = "''" + BaseSword.instance.WeaponName + "'' doesn't have enough points!";
+			showPopup ();
+			swordOrRingBox.SetActive (false);
+		}
+    
+		updateSlots ();
+		confirmBox.SetActive (false);
+		SlotController.currentSlot.panelClear ();
+	}
+}
