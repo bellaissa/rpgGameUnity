@@ -1,0 +1,104 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+//this is is a script for an item in a RPG game I made with Unity 3D
+
+public class Item : ScriptableObject {
+	
+	private string itemType;
+	private string itemName;
+	private string description;
+	private int count; //how many of this item is in the inventory
+
+	private Sprite icon;
+	private int cost;
+  
+	private bool fragmentizable = true; //is this item fragmentizable for building weapons
+	private bool deletable = true;
+	private bool usable = true;
+  
+	private STAT stat; //which weapon stat does it raise
+	private int statNum; //the amount added to the weapon stat
+
+	//for fragmentized items in general:
+	private string fragType;
+	public string FragType{get{return fragType;} set{fragType = value;}	}
+  
+	//for rare gemstones considering they have multiple stats
+	private List<STAT> stats = new List<STAT> ();
+	public List<STAT> Stats{get{return stats;} set{stats = value;}}
+	private List<int> statsNums = new List<int> ();
+	public List<int> StatsNums{get{return statsNums;} set{statsNums = value;}}
+  
+	//for coins:
+	private SPECIALITY specialAttribute;
+	public SPECIALITY SpecialAttribute{get{return specialAttribute;} set{specialAttribute = value;}}
+
+	public string ItemType{
+		get{return itemType;}
+		set{itemType = value;}
+	}
+	public string ItemName{
+		get{return itemName;}
+		set{itemName = value;}
+	}
+	public string Description{
+		get{return description;}
+		set{description = value;}
+	}
+	public int Count {
+		get{ return count; }
+		set{ count = value; }
+	}
+	public bool Fragmentizable{
+		get{return fragmentizable;}
+		set{fragmentizable = value;}
+	}
+	public bool Deletable{
+		get{return deletable;}
+		set{deletable = value;}
+	}
+	public bool Usable{
+		get{return usable;}
+		set{usable = value;}
+	}
+	public int Cost {
+		get{ return cost; }
+		set{ cost = value; }
+	}
+	public STAT Stat{
+		get{return stat;}
+		set{stat = value;}
+	}
+	public int StatNum {
+		get{ return statNum; }
+		set{ statNum = value; }
+	}
+	public Sprite Icon {
+		get{ return icon; }
+		set{icon = value;}
+	}
+
+	// items can be used when the inventory is entered
+  // each item can be used differently (or not used at all) which is why this is virtual, so it can be overrided
+  // the children of item implement this method differently
+  public virtual void Use(){
+	}
+
+	public void Fragmentize(){
+		if (fragmentizable)
+		    Delete ();
+	}
+
+	//for equipping weapons
+  public void Equip(){
+	}
+
+	public void Delete(){
+			Inventory.instance.Remove (this);
+	}
+
+	}
+}
