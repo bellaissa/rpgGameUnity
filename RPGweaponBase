@@ -1,0 +1,127 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public enum STAT{nothing, attack, durability, flame, aqua, soil, cyclone, holy, smash}
+public enum SPECIALITY{nothing, poison, thief, stop, wealth, absup, poverty, sacrifice, drain, healing}
+
+public class WeaponBaseClass : MonoBehaviour {
+
+	[SerializeField]private string weaponType;
+	[SerializeField]private string weaponName;
+	[SerializeField]private string description;
+	[SerializeField]private Sprite icon;
+  
+	[SerializeField]private int brk; //how many hits a weapon has before it breaks
+	[SerializeField]private int maxBrk;
+	[SerializeField]private int abs; //how much abs a weapon needs to level up
+	[SerializeField]private int maxAbs;
+  
+	[SerializeField]private int level; //weapon's level
+	[SerializeField]private int attack; //power of hit
+	[SerializeField]private int durability; //increases the rate of hits which the weapon can perform before breaking
+  
+	//the basic four elements:
+	[SerializeField]private int flame;
+	[SerializeField]private int aqua;
+	[SerializeField]private int soil;
+	[SerializeField]private int cyclone;
+  
+	[SerializeField]private int holy; //affects the undead type of monsters only
+	[SerializeField]private int smash; //affects certain types of monsters; most likely the ones with breakable bodies ie bones or rock
+  
+	[SerializeField]private bool poison; //poisons the enemy; enemy health decreases every few seconds
+	[SerializeField]private bool thief; //steals an item from the enemy
+	[SerializeField]private bool stop; //freezes the enemy for a few seconds
+	[SerializeField]private bool wealth; //increases amount of gilda dropped from enemy after defeated
+	[SerializeField]private bool absup; //increases amount of abs dropped from enemy after defeated
+	[SerializeField]private bool poverty; //decreases amount of gilda dropped from enemy after defeated
+	[SerializeField]private bool sacrifice; //takes some of the player's health to make the hit stronger
+	[SerializeField]private bool drain; //takes from the monster's health and transfers it to the player's health
+	[SerializeField]private bool healing; //player's health increases by one every few seconds
+	[SerializeField]private bool broken;
+  
+	[SerializeField]
+	private int pts; //weapons need points to imbibe frags and raise stats
+  
+	private string[] upgrades = new string[3];
+	private bool[] canUpgrade = new bool[3];
+  //the required stats for the weapon upgrade
+	private int[] requiredStatNums1 = new int[7]; //attack, flame, aqua, cyclone, soil, holy, smash
+	private int[] requiredStatNums2 = new int[7];
+	private int[] requiredStatNums3 = new int[7];
+
+	public int MaxBrk {get{return maxBrk;} set{maxBrk = value;}}
+	public Sprite Icon { get{return icon; } set{ icon = value;} }
+	public string WeaponName { get{ return weaponName; } set{ weaponName = value; }}
+	public int Brk{get{return brk;} set{brk = value;}}
+	public int MaxAbs{get{return maxAbs;} set{maxAbs = value;}}
+	public int Abs{get{return abs;} set{abs = value;}}
+	public int Level{get{return level;}set{level = value;}}
+	public int Attack {get{return attack;}set{attack = value;}}
+	public int Durability {get{return durability;}set{durability = value;}}
+	public int Flame {get{return flame;}set{flame = value;}}
+	public int Aqua {get{return aqua;}set{aqua = value;}}
+	public int Soil {get{return soil;}set{soil = value;}}
+	public int Cyclone {get{return cyclone;}set{cyclone = value;}}
+	public int Holy {get{return holy;}set{holy = value;}}
+	public int Smash {get{return smash;}set{smash = value;}}
+	public bool Poison{get{return poison;}set{poison = value;}}
+	public bool Thief{get{return thief;}set{thief = value;}}
+	public bool Stop{get{return stop;}set{stop = value;}}
+	public bool Wealth{get{return wealth;}set{wealth = value;}}
+	public bool Absup{get{return absup;}set{absup = value;}}
+	public bool Poverty{get{return poverty;}set{poverty = value;}}
+	public bool Sacrifice{get{return sacrifice;}set{sacrifice = value;}}
+	public bool Drain{get{return drain;}set{drain = value;}}
+	public bool Healing{get{return healing;}set{healing = value;}}
+	public bool Broken{get{return broken;}set{broken = value;}}
+	public string Description {get{ return description; }set{ description = value; }}
+	public string WeaponType {get{ return weaponType; }set{ weaponType = value; }}
+	public int Pts {get{return pts;} set{pts = value;}}
+	public string[] Upgrades {get{ return upgrades; }set{ upgrades = value; }}
+	public bool[] CanUpgrade {get{ return canUpgrade; }set{ canUpgrade = value; }}
+	public int[] RequiredStatNums1 {get{return requiredStatNums1;}set{requiredStatNums1 = value;}}
+	public int[] RequiredStatNums2 {get{return requiredStatNums2;}set{requiredStatNums2 = value;}}
+	public int[] RequiredStatNums3 {get{return requiredStatNums3;}set{requiredStatNums3 = value;}}
+
+	//decrease weapon's brk value after every hit (or hits; depending on the value of durability)
+	public void updateBrk(){
+		brk--;
+		if (brk == 0)
+			broken = true;
+	}
+  
+	//increase weapon's abs value after collecting abs from defeated enemy
+	public void updateAbs(int collectedAbs){
+		abs += collectedAbs;
+		if (abs >= maxAbs) {
+			levelUp();
+			abs = abs - maxAbs;
+		}
+	}
+  
+	//increase weapon's level by 1 everytime the abs bar is full
+	public  void levelUp(){
+			level++;
+			attack += 2;
+			if (level <= 4)
+				pts += 2;
+			else
+				pts += 4;
+			maxAbs = maxBrk + maxBrk * (14 / 100);
+	}
+
+	public virtual void maxedStats(){
+		
+	}
+  
+	//upgrade the weapon when the conditions are met
+	public virtual void canBuildUp(){
+		
+	}
+
+	public virtual void initStats(){
+	}
+}
